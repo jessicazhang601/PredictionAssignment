@@ -1,0 +1,64 @@
+---
+title: "PredictionAssignmentWriteup"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This exercise observes human acticity collected using smart divices. We would study the patterns from testing dataset.
+
+##Data Cleaning
+The testing datasets contains raw data of 20 user's exercise activities and measured 125 variables.
+We need to load the data first and exclude all NAs.
+
+```{r}
+pmlTrain<-read.csv("pml-training.csv", header=T, na.strings=c("NA", "#DIV/0!"))
+pmlTest<-read.csv("pml-testing.csv", header=T, na.string=c("NA", "#DIV/0!"))
+# exclude NAs from dataset
+noNApmlTrain<-pmlTrain[, apply(pmlTrain, 2, function(x) !any(is.na(x)))] 
+dim(noNApmlTrain)
+# remove user information and time other irrelevant variables
+finalpmlTrain<-noNApmlTrain[,-c(1:8)]
+dim(finalpmlTrain)
+```
+
+```{r}
+# data for validation
+finalpmltest<-pmlTest[,names(finalpmlTrain[,-52])]
+dim(finalpmltest)
+```
+
+# Data Patitioning
+In this simulation, we will include 80% data from training data and 20% from testing data
+```{r}
+library(caret)
+patitioning<-createDataPartition(y=finalpmlTrain$classe, p=0.8,list=F)
+DataTraining<-finalpmlTrain[patitioning,] 
+DataTest<-finalpmlTrain[-patitioning,] 
+dim(DataTraining)
+dim(DataTest)
+```
+
+```{r}
+set.seed(133)
+```
+
+```{r}
+fitControl2<-trainControl(method="cv", number=5, allowParallel=T, verbose=T)
+rffit<-train(classe~.,data=DataTraining, method="rf", trControl=fitControl2, verbose=F)
+predrf<-predict(rffit, newdata=DataTest)
+confusionMatrix(predrf, DataTest$classe)
+```
+from the results above we learn that the accuracy for 5 fold cross validation is 99.31%.
+The 95% condidence interval is [0.99,0.9955] and Kappa equal to 0.9913.
+
+# Predictions
+```{r}
+# predits 20 cases
+pred20<-predict(rffit, newdata=finalpmltest)
+pred20
+```
